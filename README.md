@@ -9,9 +9,9 @@ Load test scenarios that have been realized on AKS cluster.
 
 # Architecture 
 ## Microsoft Azure Services
-![Architecture diagram](/Architecture/AzureArch.jpg)
+![Architecture diagram](/architecture/AzureArch.jpg)
 ## JMeter Deployment
-![Architecture diagram](/Architecture/JMeter.jpg)
+![Architecture diagram](/architecture/JMeter.jpg)
 
 # Getting Started
 
