@@ -39,7 +39,7 @@ If you have already an AKS cluster or you would like to provision one from Azure
 
 ## 4. Use-case: JMeter-based load testing
 JMeter uses a master-slave topology to spread test execution among slave nodes:
-:::image type="content" source="architecture/controller-workers.png" alt-text="JMeter controller and workers":::
+![Controller-worker](architecture/controller-workers.png)
 
 You can embrace JMeter's master-slave architecture to distribute test script to several JMeter slave pods. Pods are provisioned on demand by just increasing the replicaset of slave deployment:
 
@@ -51,8 +51,7 @@ kubectl rollout status deployment/jmeter-slaves -n ${{variables.namespace}}
 
 Final dashboard with some load against https://www.google.com 
 
-:::image type="content" source="architecture/PerTest-JMeter-Grafana.jpg" alt-text="":::
-
+![Grafana Dashboard with JMeter tests](architecture/PerTest-JMeter-Grafana.jpg)
 
 To execute tests please have a look at the [start_test.sh](/shell_scripts/start_test.sh)
 
