@@ -1,0 +1,53 @@
+trigger:
+- none
+
+pool:
+  vmImage: ubuntu-latest
+
+parameters:
+  - name: TestFilePath
+    displayName: 'Test file path (/tests/file1.jmx)'
+    default: '/tests/simple.jmx'
+    type: string
+  - name: NumberOfReplicas
+    displayName: Number of JMeter slave pods
+    default: 1
+    type: number
+
+variables:
+ - name: namespace
+   value: framework
+ - name: AKSClusterName
+   value: aks9b83
+ - name: RGName
+   value: JMeterAKS.RG
+  
+
+steps:
+- task: AzureCLI@2
+  name: ExecuteCluster
+  inputs:
+    azureSubscription: 'jovadkerAKS'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |    
+      az aks get-credentials --name ${{variables.AKSClusterName}} --resource-group ${{variables.RGName}}
+      #Set replica numbers
+      kubectl scale --replicas=${{parameters.NumberOfReplicas}} deployment/jmeter-slaves -n ${{variables.namespace}}
+      kubectl rollout status deployment/jmeter-slaves -n ${{variables.namespace}}
+      echo Start test execution
+      echo 'Test file path: ${{parameters.TestFilePath}}'
+      sh $(System.DefaultWorkingDirectory)/shell_scripts/start_test.sh $(System.DefaultWorkingDirectory)/${{parameters.TestFilePath}} ${{variables.namespace}}
+      if [ -d "$(System.DefaultWorkingDirectory)/dashboard" ]; then
+        echo "Directory $(System.DefaultWorkingDirectory)/dashboard exists." 
+      else
+        echo "Error: Directory $(System.DefaultWorkingDirectory)/dashboard does not exists."
+      fi
+      
+      #Set replica number to 1
+      kubectl scale --replicas=1 deployment/jmeter-slaves -n ${{variables.namespace}}
+      kubectl rollout status deployment/jmeter-slaves -n ${{variables.namespace}}
+
+
+- publish: $(System.DefaultWorkingDirectory)/dashboard
+  artifact: JMeter

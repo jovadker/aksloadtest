@@ -1,0 +1,33 @@
+#Yaml for the StorageClass
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: premium-ssd
+provisioner: kubernetes.io/azure-disk
+parameters:
+  kind: managed
+  storageaccounttype: Premium_LRS
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.pvc.influxDiskName }}
+spec:
+  accessModes:
+    - {{ .Values.pvc.volumeAccessMode }}
+  storageClassName: premium-ssd
+  resources:
+    requests:
+      storage: {{ .Values.pvc.volumeSize }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.pvc.grafanaDiskName }}
+spec:
+  accessModes:
+    - {{ .Values.pvc.volumeAccessMode }}
+  storageClassName: premium-ssd
+  resources:
+    requests:
+      storage: {{ .Values.pvc.volumeSize }}

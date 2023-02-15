@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jmeter-slaves
+  labels:
+    jmeter_mode: slave
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      jmeter_mode: slave
+  template:
+    metadata:
+      labels:
+        jmeter_mode: slave
+    spec:
+      containers:
+      - name: jmslave
+        image: {{ .Values.images.jmeter_slave.imageName }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 1099
+        - containerPort: 50000
+        resources:
+          requests:
+            cpu: 1
+            memory: 1G
+          limits:
+            cpu: 1
+            memory: 2G
+      tolerations:
+       - key: "sku"
+         operator: "Equal"
+         value: "LoadTesting"
+         effect: "NoSchedule"
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 8 }}
+      {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: reporter
+  template:
+    metadata:
+      labels:
+        app: reporter
+    spec:
+      containers:
+        - name: reporter
+          image: {{ .Values.images.reporter.imageName }}
+          imagePullPolicy: IfNotPresent
+          command: [ "/bin/bash", "-c", "--" ]
+          args: [ "chown grafana /var/lib/grafana; chgrp grafana /var/lib/grafana;chown influxdb /var/lib/influxdb; chgrp influxdb /var/lib/influxdb;service influxdb start;service grafana-server start;while true; do sleep 30; done;" ]
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2G
+            requests:
+              cpu: "2"
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/Influxdb
+            - name: influx-volume
+              mountPath: /var/lib/influxdb
+            - name: grafana-volume
+              mountPath: /var/lib/grafana
+          ports:
+            - containerPort: 3000
+            - containerPort: 8086
+              name: api
+      volumes:
+      - name: config-volume
+        configMap:
+         name: influxdb-config
+      - name: influx-volume
+        persistentVolumeClaim:
+          claimName: azure-influx-disk
+      - name: grafana-volume
+        persistentVolumeClaim:
+          claimName: azure-grafana-disk
+      tolerations:
+      - key: "sku"
+        operator: "Equal"
+        value: "LoadTesting"
+        effect: "NoSchedule"
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 8 }}
+      {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jmeter-master
+  labels:
+    jmeter_mode: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      jmeter_mode: master
+  template:
+    metadata:
+      labels:
+        jmeter_mode: master
+    spec:
+      containers:
+      - name: jmmaster
+        image: {{ .Values.images.jmeter_master.imageName }}
+        imagePullPolicy: IfNotPresent
+        command: [ "/bin/bash", "-c", "--" ]
+        args: [ "while true; do sleep 30; done;" ]
+        volumeMounts:
+          - name: loadtest
+            mountPath: /load_test
+            subPath: "load_test"
+        ports:
+        - containerPort: 60000
+      volumes:
+      - name: loadtest 
+        configMap:
+         name: jmeter-load-test
+      tolerations:
+      - key: "sku"
+        operator: "Equal"
+        value: "LoadTesting"
+        effect: "NoSchedule"
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 8 }}
+      {{- end }}
